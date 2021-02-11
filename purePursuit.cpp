@@ -49,11 +49,15 @@ std::vector<Point> PurePursuit::smoothPath(std::vector<Point> path, double a, do
   while(change >= tolerance) {
     change = 0.0;
     for(int i = 1; i < path.size() - 1; i++) {
-      Point aux = newPath.at(i);
-      newPath.at(i).x += a * (path.at(i).x - newPath.at(i).x) + b * (newPath.at(i-1).x + newPath.at(i+1).x - (2.0 * newPath.at(i).x));
-      newPath.at(i).y += a * (path.at(i).y - newPath.at(i).y) + b * (newPath.at(i-1).y + newPath.at(i+1).y - (2.0 * newPath.at(i).y));
-			change += std::abs(aux.x - newPath.at(i).x);
-      change += std::abs(aux.y - newPath.at(i).y);
+      Point oldP = path.at(i);
+      Point newP = newPath.at(i);
+      Point currP = newP;
+      Point prevP = newPath.at(i - 1);
+      Point nextP = newPath.at(i + 1);
+      newP.x += a * (oldP.x - newP.x) + b * (prevP.x + nextP.x - (2.0 * newP.x));
+      newP.y += a * (oldP.y - newP.y) + b * (prevP.y + nextP.y - (2.0 * newP.y));
+			change += std::abs(currP.x - newP.x);
+      change += std::abs(currP.y - newP.y);
     }
   }
 
@@ -81,7 +85,7 @@ Path PurePursuit::computeVelocities(std::vector<Point> path, double maxVelocity)
   for(int i = 1; i < path.size() - 1 ; i++) {
     // find the radius of the circle that intersects the point (p) and the two points (q, r) on either side of it
     Point p = path.at(i);
-    double x1 = p.x + 0.001; // avoid divide by zero
+    double x1 = p.x + 0.001; // avoid divide by zero when calculating k2
     double y1 = p.y;
     Point q = path.at(i - 1);
     double x2 = q.x;
@@ -124,10 +128,8 @@ Path PurePursuit::computeVelocities(std::vector<Point> path, double maxVelocity)
     }
   }
 
-  // we want the robot to stop when it reaches the final point
-  targetVelocities.at(targetVelocities.size() - 1) = 0.0;
-
   // calculate new target velocities
+  targetVelocities.at(targetVelocities.size() - 1) = 0.0;
   for(int i = targetVelocities.size() - 2; i > -1; i--) {
     // use kinematic equation for Vf to find target velocities
     double distance = VectorMath::distanceFormula(path.at(i + 1), path.at(i)); // find d
@@ -138,7 +140,6 @@ Path PurePursuit::computeVelocities(std::vector<Point> path, double maxVelocity)
 
   // generate a final path that stores the waypoints, distances, and velocity information
   Path output;
-
   output.points = path;
   output.distancesToEachPoint = distToEachPoint;
   output.maxVelocitiesAtEachPoint = targetVelocities;
